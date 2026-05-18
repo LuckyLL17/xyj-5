@@ -180,7 +180,7 @@ class Game {
         if (this.selectedTowerType) {
             const buildSuccess = this.tryBuildTower(gridPos.col, gridPos.row);
             
-            if (!buildSuccess && !this.canBuildAt(gridPos.col, gridPos.row)) {
+            if (!buildSuccess) {
                 const clickedTower = this.getTowerAt(gridPos.col, gridPos.row);
                 if (clickedTower) {
                     this.selectedTowerType = null;
@@ -188,7 +188,7 @@ class Game {
                     this.uiManager.hideTowerInfo();
                     this.uiManager.deselectTowerTypes();
                     this.uiManager.showTowerInfo(clickedTower);
-                } else if (this.map.isPathCell(gridPos.col, gridPos.row)) {
+                } else {
                     this.selectedTowerType = null;
                     this.selectedTower = null;
                     this.uiManager.hideTowerInfo();
@@ -396,33 +396,26 @@ class Game {
         for (let row = 0; row < CONFIG.GRID.ROWS; row++) {
             for (let col = 0; col < CONFIG.GRID.COLS; col++) {
                 const isPath = this.map.isPathCell(col, row);
-                const hasTower = this.getTowerAt(col, row);
-                
-                if (!isPath && !hasTower) continue;
+                if (!isPath) continue;
                 
                 const x = offsetX + col * CELL_SIZE;
                 const y = offsetY + row * CELL_SIZE;
                 
-                this.ctx.globalAlpha = 0.3;
-                this.ctx.fillStyle = 'rgba(255, 0, 0, 0.4)';
-                this.ctx.strokeStyle = '#ff0000';
-                this.ctx.lineWidth = 2;
+                this.ctx.globalAlpha = 0.2;
+                this.ctx.fillStyle = 'rgba(255, 0, 0, 0.3)';
                 this.ctx.fillRect(x, y, CELL_SIZE, CELL_SIZE);
+                
+                this.ctx.globalAlpha = 0.5;
+                this.ctx.strokeStyle = '#ff0000';
+                this.ctx.lineWidth = 1;
                 this.ctx.strokeRect(x + 1, y + 1, CELL_SIZE - 2, CELL_SIZE - 2);
                 
-                if (isPath) {
-                    this.ctx.font = 'bold 12px Arial';
-                    this.ctx.fillStyle = '#ff0000';
-                    this.ctx.textAlign = 'center';
-                    this.ctx.textBaseline = 'middle';
-                    this.ctx.fillText('禁止', x + CELL_SIZE / 2, y + CELL_SIZE / 2);
-                } else if (hasTower) {
-                    this.ctx.font = 'bold 12px Arial';
-                    this.ctx.fillStyle = '#ff0000';
-                    this.ctx.textAlign = 'center';
-                    this.ctx.textBaseline = 'middle';
-                    this.ctx.fillText('已占用', x + CELL_SIZE / 2, y + CELL_SIZE / 2);
-                }
+                this.ctx.globalAlpha = 0.7;
+                this.ctx.font = 'bold 10px Arial';
+                this.ctx.fillStyle = '#ff0000';
+                this.ctx.textAlign = 'center';
+                this.ctx.textBaseline = 'middle';
+                this.ctx.fillText('禁止', x + CELL_SIZE / 2, y + CELL_SIZE / 2);
             }
         }
         
@@ -590,7 +583,7 @@ class Game {
         
         const towerType = this.selectedTowerType ? CONFIG.TOWER_TYPES[this.selectedTowerType.toUpperCase()] : null;
         const goldInsufficient = towerType && this.gold < towerType.cost;
-        const showAllForbidden = goldInsufficient;
+        const showAllForbidden = this.selectedTowerType || goldInsufficient;
         
         if (showAllForbidden) {
             this.renderForbiddenZones();
@@ -606,7 +599,7 @@ class Game {
         
         this.renderSelectedTowerRange();
         
-        if (this.mouseOverPath) {
+        if (showAllForbidden || this.mouseOverPath) {
             this.renderForbiddenZoneOnHover();
         }
         
@@ -649,59 +642,51 @@ class Game {
         
         this.ctx.save();
         
-        this.ctx.globalAlpha = 0.6;
-        
-        if (!canAfford) {
+        if (!canBuild || !canAfford) {
+            this.ctx.globalAlpha = 0.6;
             this.ctx.fillStyle = 'rgba(255, 0, 0, 0.2)';
             this.ctx.strokeStyle = '#ff0000';
-        } else {
-            this.ctx.fillStyle = canBuild ? 'rgba(0, 255, 0, 0.2)' : 'rgba(255, 0, 0, 0.2)';
-            this.ctx.strokeStyle = canBuild ? '#00ff00' : '#ff0000';
+            this.ctx.lineWidth = 2;
+            this.ctx.fillRect(x, y, cellSize, cellSize);
+            this.ctx.strokeRect(x, y, cellSize, cellSize);
+            
+            this.ctx.globalAlpha = 0.8;
+            this.ctx.fillStyle = '#ff0000';
+            this.ctx.font = 'bold 12px Arial';
+            this.ctx.textAlign = 'center';
+            this.ctx.textBaseline = 'middle';
+            
+            if (!canAfford) {
+                this.ctx.fillText('金币不足', x + cellSize / 2, y + cellSize / 2);
+            } else if (this.map.isPathCell(col, row)) {
+                this.ctx.fillText('禁止', x + cellSize / 2, y + cellSize / 2);
+            } else if (this.getTowerAt(col, row)) {
+                this.ctx.fillText('已占用', x + cellSize / 2, y + cellSize / 2);
+            }
+            
+            this.ctx.restore();
+            return;
         }
         
+        this.ctx.globalAlpha = 0.6;
+        this.ctx.fillStyle = 'rgba(0, 255, 0, 0.2)';
+        this.ctx.strokeStyle = '#00ff00';
         this.ctx.lineWidth = 2;
         this.ctx.fillRect(x, y, cellSize, cellSize);
         this.ctx.strokeRect(x, y, cellSize, cellSize);
         
         if (towerType) {
             this.ctx.globalAlpha = 0.3;
-            
-            if (!canAfford) {
-                this.ctx.fillStyle = 'rgba(255, 0, 0, 0.3)';
-            } else {
-                this.ctx.fillStyle = CONFIG.COLORS.RANGE;
-            }
-            
+            this.ctx.fillStyle = CONFIG.COLORS.RANGE;
             this.ctx.beginPath();
             this.ctx.arc(centerX, centerY, towerType.range, 0, Math.PI * 2);
             this.ctx.fill();
-            
-            if (!canAfford) {
-                this.ctx.strokeStyle = '#ff0000';
-                this.ctx.lineWidth = 2;
-                this.ctx.stroke();
-            }
             
             this.ctx.globalAlpha = 0.8;
             this.ctx.fillStyle = towerType.color;
             this.ctx.beginPath();
             this.ctx.arc(centerX, centerY, 15, 0, Math.PI * 2);
             this.ctx.fill();
-            
-            if (!canAfford) {
-                this.ctx.strokeStyle = '#ff0000';
-                this.ctx.lineWidth = 4;
-                this.ctx.beginPath();
-                this.ctx.moveTo(centerX - 10, centerY - 10);
-                this.ctx.lineTo(centerX + 10, centerY + 10);
-                this.ctx.moveTo(centerX + 10, centerY - 10);
-                this.ctx.lineTo(centerX - 10, centerY + 10);
-                this.ctx.stroke();
-                
-                this.ctx.beginPath();
-                this.ctx.arc(centerX, centerY, 18, 0, Math.PI * 2);
-                this.ctx.stroke();
-            }
         }
         
         this.ctx.restore();
