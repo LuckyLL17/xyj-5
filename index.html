@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>塔防游戏 - 保卫基地</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: #1a1a2e;
+            color: #fff;
+            overflow: hidden;
+            touch-action: manipulation;
+        }
+        
+        #game-container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        #game-canvas {
+            display: block;
+            background-color: #16213e;
+        }
+        
+        #ui-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            pointer-events: none;
+        }
+        
+        #top-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 20px;
+            background: linear-gradient(180deg, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0.4) 100%);
+        }
+        
+        .stat-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 16px;
+            font-weight: bold;
+        }
+        
+        .stat-icon {
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+        }
+        
+        #tower-panel {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            padding: 15px;
+            background: linear-gradient(0deg, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0.5) 100%);
+            pointer-events: auto;
+        }
+        
+        #tower-list {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+        
+        .tower-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 5px;
+            padding: 10px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            min-width: 80px;
+        }
+        
+        .tower-item:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: scale(1.05);
+        }
+        
+        .tower-item.selected {
+            background: rgba(100, 200, 255, 0.3);
+            border: 2px solid #64c8ff;
+        }
+        
+        .tower-item.locked {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .tower-icon {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+        }
+        
+        .tower-name {
+            font-size: 12px;
+            font-weight: bold;
+        }
+        
+        .tower-cost {
+            font-size: 11px;
+            color: #ffd700;
+        }
+        
+        #wave-info {
+            position: absolute;
+            top: 50px;
+            left: 50%;
+            transform: translateX(-50%);
+            text-align: center;
+            pointer-events: auto;
+        }
+        
+        #start-wave-btn {
+            padding: 10px 30px;
+            font-size: 18px;
+            font-weight: bold;
+            background: linear-gradient(180deg, #ff6b6b 0%, #ee5a5a 100%);
+            border: none;
+            border-radius: 25px;
+            color: white;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        #start-wave-btn:hover {
+            transform: scale(1.05);
+            background: linear-gradient(180deg, #ff8080 0%, #ff6b6b 100%);
+        }
+        
+        #wave-text {
+            font-size: 20px;
+            font-weight: bold;
+            margin-top: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+        }
+        
+        #game-over-screen, #leaderboard-screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.85);
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            pointer-events: auto;
+            z-index: 100;
+        }
+        
+        .screen-title {
+            font-size: 48px;
+            font-weight: bold;
+            margin-bottom: 30px;
+            text-shadow: 3px 3px 6px rgba(0,0,0,0.5);
+        }
+        
+        .game-over-stats {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            margin-bottom: 30px;
+            font-size: 20px;
+        }
+        
+        .game-over-btn {
+            padding: 15px 40px;
+            font-size: 18px;
+            font-weight: bold;
+            background: linear-gradient(180deg, #4ecdc4 0%, #44a3a0 100%);
+            border: none;
+            border-radius: 30px;
+            color: white;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin: 10px;
+        }
+        
+        .game-over-btn:hover {
+            transform: scale(1.05);
+        }
+        
+        #leaderboard-table {
+            width: 80%;
+            max-width: 600px;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+        
+        #leaderboard-table th,
+        #leaderboard-table td {
+            padding: 15px;
+            text-align: center;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        #leaderboard-table th {
+            background: rgba(255, 255, 255, 0.1);
+            font-weight: bold;
+        }
+        
+        #leaderboard-table tr:hover {
+            background: rgba(255, 255, 255, 0.05);
+        }
+        
+        .rank-1 { color: #ffd700; font-weight: bold; }
+        .rank-2 { color: #c0c0c0; font-weight: bold; }
+        .rank-3 { color: #cd7f32; font-weight: bold; }
+        
+        #tower-info {
+            position: absolute;
+            top: 50px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 15px;
+            border-radius: 10px;
+            display: none;
+            pointer-events: auto;
+            min-width: 200px;
+        }
+        
+        #tower-info h3 {
+            margin-bottom: 10px;
+            color: #4ecdc4;
+        }
+        
+        #tower-info p {
+            margin: 5px 0;
+            font-size: 14px;
+        }
+        
+        #upgrade-btn {
+            margin-top: 10px;
+            padding: 8px 16px;
+            background: linear-gradient(180deg, #ffd700 0%, #ffae00 100%);
+            border: none;
+            border-radius: 5px;
+            color: #1a1a2e;
+            font-weight: bold;
+            cursor: pointer;
+            width: 100%;
+        }
+        
+        #upgrade-btn:disabled {
+            background: #666;
+            color: #999;
+            cursor: not-allowed;
+        }
+        
+        #user-level {
+            position: absolute;
+            top: 50px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 10px 20px;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: bold;
+        }
+        
+        #experience-bar {
+            width: 100%;
+            height: 8px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 4px;
+            margin-top: 5px;
+            overflow: hidden;
+        }
+        
+        #experience-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #ff6b6b 0%, #ffd700 100%);
+            width: 0%;
+            transition: width 0.3s;
+        }
+        
+        .loading-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: #1a1a2e;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+        
+        .loading-text {
+            font-size: 24px;
+            animation: pulse 1.5s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        
+        #pause-btn {
+            position: absolute;
+            top: 10px;
+            right: 20px;
+            padding: 8px 16px;
+            background: rgba(255, 255, 255, 0.1);
+            border: none;
+            border-radius: 5px;
+            color: white;
+            font-weight: bold;
+            cursor: pointer;
+            pointer-events: auto;
+        }
+        
+        #pause-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+    </style>
+</head>
+<body>
+    <div id="game-container">
+        <div class="loading-overlay" id="loading-overlay">
+            <div class="loading-text">游戏加载中...</div>
+        </div>
+        
+        <canvas id="game-canvas"></canvas>
+        
+        <div id="ui-container">
+            <div id="top-bar">
+                <div class="stat-item">
+                    <span class="stat-icon">💰</span>
+                    <span id="gold-display">200</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-icon">❤️</span>
+                    <span id="base-health-display">20</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-icon">💀</span>
+                    <span id="kills-display">0</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-icon">🌊</span>
+                    <span id="wave-display">0</span>
+                </div>
+            </div>
+            
+            <div id="user-level">
+                <div>等级: <span id="level-display">1</span></div>
+                <div id="experience-bar">
+                    <div id="experience-fill"></div>
+                </div>
+                <div style="font-size: 12px; margin-top: 3px;">经验: <span id="exp-display">0</span>/<span id="exp-max-display">100</span></div>
+            </div>
+            
+            <div id="wave-info">
+                <button id="start-wave-btn">开始第 1 波</button>
+                <div id="wave-text" style="display: none;"></div>
+            </div>
+            
+            <div id="tower-info">
+                <h3 id="tower-info-name">箭塔</h3>
+                <p>等级: <span id="tower-info-level">1</span></p>
+                <p>攻击力: <span id="tower-info-damage">10</span></p>
+                <p>攻击范围: <span id="tower-info-range">100</span></p>
+                <p>攻击速度: <span id="tower-info-speed">1.0</span>/秒</p>
+                <button id="upgrade-btn">升级 (50 金币)</button>
+            </div>
+            
+            <button id="pause-btn" style="display: none;">暂停</button>
+        </div>
+        
+        <div id="tower-panel">
+            <div id="tower-list">
+            </div>
+        </div>
+        
+        <div id="game-over-screen">
+            <h1 class="screen-title" id="game-over-title">游戏结束</h1>
+            <div class="game-over-stats">
+                <p>存活波数: <span id="final-wave">0</span></p>
+                <p>杀敌数: <span id="final-kills">0</span></p>
+                <p>最终得分: <span id="final-score">0</span></p>
+            </div>
+            <button class="game-over-btn" id="restart-btn">重新开始</button>
+            <button class="game-over-btn" id="leaderboard-btn">查看排行榜</button>
+        </div>
+        
+        <div id="leaderboard-screen">
+            <h1 class="screen-title">排行榜</h1>
+            <table id="leaderboard-table">
+                <thead>
+                    <tr>
+                        <th>排名</th>
+                        <th>玩家</th>
+                        <th>波数</th>
+                        <th>击杀</th>
+                        <th>得分</th>
+                    </tr>
+                </thead>
+                <tbody id="leaderboard-body">
+                </tbody>
+            </table>
+            <button class="game-over-btn" id="back-btn">返回</button>
+        </div>
+    </div>
+    
+    <script src="js/config.js"></script>
+    <script src="js/utils.js"></script>
+    <script src="js/storage.js"></script>
+    <script src="js/mock-api.js"></script>
+    <script src="js/game.js"></script>
+    <script src="js/entity.js"></script>
+    <script src="js/map.js"></script>
+    <script src="js/enemy.js"></script>
+    <script src="js/tower.js"></script>
+    <script src="js/bullet.js"></script>
+    <script src="js/wave.js"></script>
+    <script src="js/level.js"></script>
+    <script src="js/ui.js"></script>
+    <script src="js/main.js"></script>
+</body>
+</html>
