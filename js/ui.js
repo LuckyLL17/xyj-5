@@ -189,6 +189,7 @@ class UIManager {
     
     deselectTowerTypes() {
         this.game.selectedTowerType = null;
+        this.game.hoverCell = null;
         const towerItems = document.querySelectorAll('.tower-item');
         towerItems.forEach(item => item.classList.remove('selected'));
     }
