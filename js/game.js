@@ -146,7 +146,13 @@ class Game {
         
         if (this.selectedTowerType && this.state === CONFIG.GAME_STATES.WAVE_PREPARE) {
             const gridPos = this.getGridPosition(pos.x, pos.y);
-            this.hoverCell = gridPos;
+            if (this.isPositionInMap(gridPos.col, gridPos.row)) {
+                this.hoverCell = gridPos;
+            } else {
+                this.hoverCell = null;
+            }
+        } else {
+            this.hoverCell = null;
         }
     }
     
@@ -508,6 +514,8 @@ class Game {
             this.map.render(this.ctx);
         }
         
+        this.renderForbiddenAreas();
+        
         for (const entity of this.entities) {
             if (entity.visible && entity.active) {
                 entity.render(this.ctx);
@@ -519,6 +527,50 @@ class Game {
         this.renderSelectedTowerRange();
         
         this.renderBuildPreview();
+    }
+    
+    renderForbiddenAreas() {
+        if (!this.selectedTowerType || this.state !== CONFIG.GAME_STATES.WAVE_PREPARE) return;
+        
+        const towerType = CONFIG.TOWER_TYPES[this.selectedTowerType.toUpperCase()];
+        if (!towerType) return;
+        
+        const canAfford = this.gold >= towerType.cost;
+        const cellSize = CONFIG.GRID.CELL_SIZE;
+        
+        if (!canAfford) {
+            this.ctx.save();
+            this.ctx.globalAlpha = 0.3;
+            this.ctx.fillStyle = 'rgba(255, 0, 0, 0.3)';
+            this.ctx.strokeStyle = 'rgba(255, 0, 0, 0.6)';
+            this.ctx.lineWidth = 1;
+            
+            for (const cell of this.map.path) {
+                const x = this.mapOffsetX + cell.col * cellSize;
+                const y = this.mapOffsetY + cell.row * cellSize;
+                this.ctx.fillRect(x, y, cellSize, cellSize);
+                this.ctx.strokeRect(x, y, cellSize, cellSize);
+            }
+            
+            this.ctx.restore();
+        }
+        
+        if (this.hoverCell) {
+            const { col, row } = this.hoverCell;
+            if (this.isPositionInMap(col, row) && this.map.isPathCell(col, row)) {
+                const x = this.mapOffsetX + col * cellSize;
+                const y = this.mapOffsetY + row * cellSize;
+                
+                this.ctx.save();
+                this.ctx.globalAlpha = 0.5;
+                this.ctx.fillStyle = 'rgba(255, 0, 0, 0.4)';
+                this.ctx.strokeStyle = '#ff0000';
+                this.ctx.lineWidth = 2;
+                this.ctx.fillRect(x, y, cellSize, cellSize);
+                this.ctx.strokeRect(x, y, cellSize, cellSize);
+                this.ctx.restore();
+            }
+        }
     }
     
     renderSelectedTowerRange() {
