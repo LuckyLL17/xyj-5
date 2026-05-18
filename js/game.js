@@ -144,9 +144,15 @@ class Game {
         this.mouseX = pos.x;
         this.mouseY = pos.y;
         
-        if (this.selectedTowerType && this.state === CONFIG.GAME_STATES.WAVE_PREPARE) {
+        if (this.selectedTowerType) {
             const gridPos = this.getGridPosition(pos.x, pos.y);
-            this.hoverCell = gridPos;
+            if (this.isPositionInMap(gridPos.col, gridPos.row)) {
+                this.hoverCell = gridPos;
+            } else {
+                this.hoverCell = null;
+            }
+        } else {
+            this.hoverCell = null;
         }
     }
     
@@ -181,11 +187,6 @@ class Game {
                     this.uiManager.hideTowerInfo();
                     this.uiManager.deselectTowerTypes();
                     this.uiManager.showTowerInfo(clickedTower);
-                } else if (this.map.isPathCell(gridPos.col, gridPos.row)) {
-                    this.selectedTowerType = null;
-                    this.selectedTower = null;
-                    this.uiManager.hideTowerInfo();
-                    this.uiManager.deselectTowerTypes();
                 }
             }
             return;
@@ -508,6 +509,8 @@ class Game {
             this.map.render(this.ctx);
         }
         
+        this.renderForbiddenAreas();
+        
         for (const entity of this.entities) {
             if (entity.visible && entity.active) {
                 entity.render(this.ctx);
@@ -519,6 +522,53 @@ class Game {
         this.renderSelectedTowerRange();
         
         this.renderBuildPreview();
+    }
+    
+    renderForbiddenAreas() {
+        if (!this.selectedTowerType) return;
+        
+        const towerType = CONFIG.TOWER_TYPES[this.selectedTowerType.toUpperCase()];
+        if (!towerType) return;
+        
+        const canAfford = this.gold >= towerType.cost;
+        const cellSize = CONFIG.GRID.CELL_SIZE;
+        
+        this.ctx.save();
+        this.ctx.globalAlpha = canAfford ? 0.25 : 0.4;
+        this.ctx.fillStyle = canAfford ? 'rgba(255, 100, 100, 0.25)' : 'rgba(255, 0, 0, 0.4)';
+        this.ctx.strokeStyle = canAfford ? 'rgba(255, 100, 100, 0.6)' : 'rgba(255, 0, 0, 0.7)';
+        this.ctx.lineWidth = 1;
+        
+        for (const cell of this.map.path) {
+            const x = this.mapOffsetX + cell.col * cellSize;
+            const y = this.mapOffsetY + cell.row * cellSize;
+            this.ctx.fillRect(x, y, cellSize, cellSize);
+            this.ctx.strokeRect(x, y, cellSize, cellSize);
+        }
+        
+        this.ctx.restore();
+        
+        if (this.hoverCell) {
+            const { col, row } = this.hoverCell;
+            if (this.isPositionInMap(col, row)) {
+                const isPath = this.map.isPathCell(col, row);
+                const hasTower = this.getTowerAt(col, row);
+                
+                if (isPath || hasTower) {
+                    const x = this.mapOffsetX + col * cellSize;
+                    const y = this.mapOffsetY + row * cellSize;
+                    
+                    this.ctx.save();
+                    this.ctx.globalAlpha = 0.7;
+                    this.ctx.fillStyle = 'rgba(255, 0, 0, 0.5)';
+                    this.ctx.strokeStyle = '#ff0000';
+                    this.ctx.lineWidth = 3;
+                    this.ctx.fillRect(x, y, cellSize, cellSize);
+                    this.ctx.strokeRect(x, y, cellSize, cellSize);
+                    this.ctx.restore();
+                }
+            }
+        }
     }
     
     renderSelectedTowerRange() {
@@ -540,7 +590,7 @@ class Game {
     
     renderBuildPreview() {
         if (!this.selectedTowerType || !this.hoverCell) return;
-        if (this.state !== CONFIG.GAME_STATES.WAVE_PREPARE) return;
+        if (this.state !== CONFIG.GAME_STATES.WAVE_PREPARE && this.state !== CONFIG.GAME_STATES.WAVE_RUNNING) return;
         
         const { col, row } = this.hoverCell;
         if (!this.isPositionInMap(col, row)) return;
