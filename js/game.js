@@ -40,6 +40,7 @@ class Game {
         this.mouseX = 0;
         this.mouseY = 0;
         this.mouseDown = false;
+        this.mouseOverPath = false;
         
         this.animationFrameId = null;
     }
@@ -144,8 +145,14 @@ class Game {
         this.mouseX = pos.x;
         this.mouseY = pos.y;
         
+        const gridPos = this.getGridPosition(pos.x, pos.y);
+        if (this.map && this.isPositionInMap(gridPos.col, gridPos.row)) {
+            this.mouseOverPath = this.map.isPathCell(gridPos.col, gridPos.row);
+        } else {
+            this.mouseOverPath = false;
+        }
+        
         if (this.selectedTowerType && this.state === CONFIG.GAME_STATES.WAVE_PREPARE) {
-            const gridPos = this.getGridPosition(pos.x, pos.y);
             this.hoverCell = gridPos;
         }
     }
@@ -379,6 +386,79 @@ class Game {
         }
     }
     
+    renderForbiddenZones() {
+        const { CELL_SIZE } = CONFIG.GRID;
+        const offsetX = this.mapOffsetX || 0;
+        const offsetY = this.mapOffsetY || 0;
+        
+        this.ctx.save();
+        
+        for (let row = 0; row < CONFIG.GRID.ROWS; row++) {
+            for (let col = 0; col < CONFIG.GRID.COLS; col++) {
+                const isPath = this.map.isPathCell(col, row);
+                const hasTower = this.getTowerAt(col, row);
+                
+                if (!isPath && !hasTower) continue;
+                
+                const x = offsetX + col * CELL_SIZE;
+                const y = offsetY + row * CELL_SIZE;
+                
+                this.ctx.globalAlpha = 0.3;
+                this.ctx.fillStyle = 'rgba(255, 0, 0, 0.4)';
+                this.ctx.strokeStyle = '#ff0000';
+                this.ctx.lineWidth = 2;
+                this.ctx.fillRect(x, y, CELL_SIZE, CELL_SIZE);
+                this.ctx.strokeRect(x + 1, y + 1, CELL_SIZE - 2, CELL_SIZE - 2);
+                
+                if (isPath) {
+                    this.ctx.font = 'bold 12px Arial';
+                    this.ctx.fillStyle = '#ff0000';
+                    this.ctx.textAlign = 'center';
+                    this.ctx.textBaseline = 'middle';
+                    this.ctx.fillText('禁止', x + CELL_SIZE / 2, y + CELL_SIZE / 2);
+                } else if (hasTower) {
+                    this.ctx.font = 'bold 12px Arial';
+                    this.ctx.fillStyle = '#ff0000';
+                    this.ctx.textAlign = 'center';
+                    this.ctx.textBaseline = 'middle';
+                    this.ctx.fillText('已占用', x + CELL_SIZE / 2, y + CELL_SIZE / 2);
+                }
+            }
+        }
+        
+        this.ctx.restore();
+    }
+    
+    renderForbiddenZoneOnHover() {
+        const gridPos = this.getGridPosition(this.mouseX, this.mouseY);
+        if (!this.isPositionInMap(gridPos.col, gridPos.row)) return;
+        
+        const { CELL_SIZE } = CONFIG.GRID;
+        const offsetX = this.mapOffsetX || 0;
+        const offsetY = this.mapOffsetY || 0;
+        const x = offsetX + gridPos.col * CELL_SIZE;
+        const y = offsetY + gridPos.row * CELL_SIZE;
+        
+        this.ctx.save();
+        
+        this.ctx.globalAlpha = 0.8;
+        this.ctx.lineWidth = 3;
+        this.ctx.strokeStyle = '#ff0000';
+        this.ctx.strokeRect(x + 2, y + 2, CELL_SIZE - 4, CELL_SIZE - 4);
+        
+        this.ctx.globalAlpha = 0.6;
+        this.ctx.fillStyle = 'rgba(255, 0, 0, 0.3)';
+        this.ctx.fillRect(x, y, CELL_SIZE, CELL_SIZE);
+        
+        this.ctx.font = 'bold 12px Arial';
+        this.ctx.fillStyle = '#ff0000';
+        this.ctx.textAlign = 'center';
+        this.ctx.textBaseline = 'middle';
+        this.ctx.fillText('禁止', x + CELL_SIZE / 2, y + CELL_SIZE / 2);
+        
+        this.ctx.restore();
+    }
+    
     onEnemyKilled(enemy) {
         this.kills++;
         this.gold += enemy.goldReward;
@@ -508,6 +588,14 @@ class Game {
             this.map.render(this.ctx);
         }
         
+        const towerType = this.selectedTowerType ? CONFIG.TOWER_TYPES[this.selectedTowerType.toUpperCase()] : null;
+        const goldInsufficient = towerType && this.gold < towerType.cost;
+        const showAllForbidden = goldInsufficient;
+        
+        if (showAllForbidden) {
+            this.renderForbiddenZones();
+        }
+        
         for (const entity of this.entities) {
             if (entity.visible && entity.active) {
                 entity.render(this.ctx);
@@ -517,6 +605,10 @@ class Game {
         this.renderParticles(this.ctx);
         
         this.renderSelectedTowerRange();
+        
+        if (this.mouseOverPath) {
+            this.renderForbiddenZoneOnHover();
+        }
         
         this.renderBuildPreview();
     }
@@ -540,7 +632,7 @@ class Game {
     
     renderBuildPreview() {
         if (!this.selectedTowerType || !this.hoverCell) return;
-        if (this.state !== CONFIG.GAME_STATES.WAVE_PREPARE) return;
+        if (this.state !== CONFIG.GAME_STATES.WAVE_PREPARE && this.state !== CONFIG.GAME_STATES.WAVE_RUNNING) return;
         
         const { col, row } = this.hoverCell;
         if (!this.isPositionInMap(col, row)) return;

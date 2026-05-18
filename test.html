@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>塔防游戏 - 禁止区域测试</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            background: #1a1a2e;
+            font-family: Arial, sans-serif;
+            color: #fff;
+            text-align: center;
+        }
+        .test-info {
+            margin-bottom: 20px;
+            padding: 15px;
+            background: #16213e;
+            border-radius: 8px;
+            text-align: left;
+            max-width: 800px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        .test-info h2 {
+            margin-top: 0;
+            color: #4ecdc4;
+        }
+        .test-info p {
+            margin: 5px 0;
+            line-height: 1.6;
+        }
+        .test-status {
+            padding: 10px;
+            background: #0f3460;
+            border-radius: 5px;
+            margin-top: 15px;
+        }
+        .status-item {
+            display: inline-block;
+            margin: 5px 15px;
+            padding: 5px 10px;
+            background: #1a1a2e;
+            border-radius: 4px;
+        }
+        .status-item span:first-child {
+            color: #64c8ff;
+            margin-right: 5px;
+        }
+        .status-item span:last-child {
+            font-weight: bold;
+        }
+        .status-on {
+            color: #00ff64 !important;
+        }
+        .status-off {
+            color: #ff6b6b !important;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-info">
+        <h2>塔防游戏禁止区域功能测试</h2>
+        <p><strong>测试功能：</strong></p>
+        <p>1. <strong>金币不足时显示禁止区域</strong> - 当选择需要更多金币的塔台类型时，整个地图的禁止区域会被高亮显示</p>
+        <p>2. <strong>鼠标划过敌人路径时显示禁止区域</strong> - 当鼠标移动到敌人行走区域时，该区域会高亮显示禁止</p>
+        <p>3. <strong>选中塔台时显示禁止区域</strong> - 当选择塔台类型时，地图中的禁止区域会被高亮显示</p>
+        
+        <div class="test-status">
+            <div class="status-item">
+                <span>金币不足：</span>
+                <span id="gold-status" class="status-off">否</span>
+            </div>
+            <div class="status-item">
+                <span>鼠标在路径上：</span>
+                <span id="mouse-status" class="status-off">否</span>
+            </div>
+            <div class="status-item">
+                <span>选中塔台：</span>
+                <span id="tower-status" class="status-off">否</span>
+            </div>
+            <div class="status-item">
+                <span>显示禁止区域：</span>
+                <span id="forbidden-status" class="status-off">否</span>
+            </div>
+        </div>
+    </div>
+    
+    <script src="js/config.js"></script>
+    <script src="js/utils.js"></script>
+    <script src="js/entities.js"></script>
+    <script src="js/map.js"></script>
+    <script src="js/enemy.js"></script>
+    <script src="js/tower.js"></script>
+    <script src="js/bullet.js"></script>
+    <script src="js/game.js"></script>
+    
+    <script>
+        // 创建游戏实例并初始化
+        const game = new Game();
+        
+        // 模拟测试
+        function updateTestStatus() {
+            const goldStatus = document.getElementById('gold-status');
+            const mouseStatus = document.getElementById('mouse-status');
+            const towerStatus = document.getElementById('tower-status');
+            const forbiddenStatus = document.getElementById('forbidden-status');
+            
+            // 更新状态显示
+            if (game.gold < CONFIG.TOWER_TYPES[game.selectedTowerType?.toUpperCase()]?.cost) {
+                goldStatus.textContent = '是';
+                goldStatus.className = 'status-on';
+            } else {
+                goldStatus.textContent = '否';
+                goldStatus.className = 'status-off';
+            }
+            
+            if (game.mouseOverPath) {
+                mouseStatus.textContent = '是';
+                mouseStatus.className = 'status-on';
+            } else {
+                mouseStatus.textContent = '否';
+                mouseStatus.className = 'status-off';
+            }
+            
+            if (game.selectedTowerType) {
+                towerStatus.textContent = '是';
+                towerStatus.className = 'status-on';
+            } else {
+                towerStatus.textContent = '否';
+                towerStatus.className = 'status-off';
+            }
+            
+            // 检查是否应该显示禁止区域
+            const towerType = game.selectedTowerType ? CONFIG.TOWER_TYPES[game.selectedTowerType.toUpperCase()] : null;
+            const goldInsufficient = towerType && game.gold < towerType.cost;
+            const showForbidden = goldInsufficient || game.mouseOverPath || game.selectedTowerType;
+            
+            if (showForbidden) {
+                forbiddenStatus.textContent = '是';
+                forbiddenStatus.className = 'status-on';
+            } else {
+                forbiddenStatus.textContent = '否';
+                forbiddenStatus.className = 'status-off';
+            }
+        }
+        
+        // 定期更新测试状态
+        setInterval(updateTestStatus, 100);
+        
+        // 初始化游戏
+        game.init();
+    </script>
+</body>
+</html>
