@@ -550,7 +550,8 @@ class Game {
     
     renderForbiddenZones() {
         if (!this.selectedTowerType) return;
-        if (this.state !== CONFIG.GAME_STATES.WAVE_PREPARE) return;
+        if (this.state === CONFIG.GAME_STATES.PAUSED) return;
+        if (this.state === CONFIG.GAME_STATES.GAME_OVER) return;
 
         const towerType = CONFIG.TOWER_TYPES[this.selectedTowerType.toUpperCase()];
         if (!towerType) return;
@@ -574,35 +575,35 @@ class Game {
                 const isHoverCell = this.hoverCell && this.hoverCell.col === col && this.hoverCell.row === row;
 
                 if (isPath) {
-                    this.ctx.globalAlpha = 0.35;
-                    this.ctx.fillStyle = 'rgba(255, 50, 50, 0.3)';
+                    this.ctx.globalAlpha = 0.4;
+                    this.ctx.fillStyle = 'rgba(255, 50, 50, 0.35)';
                     this.ctx.fillRect(x, y, cellSize, cellSize);
-
-                    this.ctx.globalAlpha = 0.6;
-                    this.ctx.strokeStyle = '#ff3333';
-                    this.ctx.lineWidth = 1.5;
-                    this.ctx.strokeRect(x, y, cellSize, cellSize);
 
                     this.ctx.globalAlpha = 0.7;
                     this.ctx.strokeStyle = '#ff3333';
                     this.ctx.lineWidth = 2;
+                    this.ctx.strokeRect(x + 1, y + 1, cellSize - 2, cellSize - 2);
+
+                    this.ctx.globalAlpha = 0.8;
+                    this.ctx.strokeStyle = '#ff3333';
+                    this.ctx.lineWidth = 2.5;
                     this.ctx.beginPath();
-                    this.ctx.moveTo(centerX - 8, centerY - 8);
-                    this.ctx.lineTo(centerX + 8, centerY + 8);
-                    this.ctx.moveTo(centerX + 8, centerY - 8);
-                    this.ctx.lineTo(centerX - 8, centerY + 8);
+                    this.ctx.moveTo(centerX - 10, centerY - 10);
+                    this.ctx.lineTo(centerX + 10, centerY + 10);
+                    this.ctx.moveTo(centerX + 10, centerY - 10);
+                    this.ctx.lineTo(centerX - 10, centerY + 10);
                     this.ctx.stroke();
                 } else if (hasTower && !isHoverCell) {
-                    this.ctx.globalAlpha = 0.25;
-                    this.ctx.fillStyle = 'rgba(255, 50, 50, 0.2)';
+                    this.ctx.globalAlpha = 0.3;
+                    this.ctx.fillStyle = 'rgba(255, 50, 50, 0.25)';
                     this.ctx.fillRect(x, y, cellSize, cellSize);
 
-                    this.ctx.globalAlpha = 0.5;
+                    this.ctx.globalAlpha = 0.6;
                     this.ctx.strokeStyle = '#ff3333';
                     this.ctx.lineWidth = 1.5;
-                    this.ctx.strokeRect(x, y, cellSize, cellSize);
+                    this.ctx.strokeRect(x + 1, y + 1, cellSize - 2, cellSize - 2);
 
-                    this.ctx.globalAlpha = 0.6;
+                    this.ctx.globalAlpha = 0.7;
                     this.ctx.strokeStyle = '#ff3333';
                     this.ctx.lineWidth = 2;
                     this.ctx.beginPath();
@@ -612,21 +613,24 @@ class Game {
                     this.ctx.lineTo(centerX - 8, centerY + 8);
                     this.ctx.stroke();
                 } else if (!canAfford && !hasTower && !isPath && !isHoverCell) {
-                    this.ctx.globalAlpha = 0.3;
-                    this.ctx.fillStyle = 'rgba(255, 100, 0, 0.2)';
+                    this.ctx.globalAlpha = 0.35;
+                    this.ctx.fillStyle = 'rgba(255, 100, 0, 0.25)';
                     this.ctx.fillRect(x, y, cellSize, cellSize);
 
-                    this.ctx.globalAlpha = 0.5;
+                    this.ctx.globalAlpha = 0.6;
                     this.ctx.strokeStyle = '#ff6600';
                     this.ctx.lineWidth = 1.5;
-                    this.ctx.strokeRect(x, y, cellSize, cellSize);
+                    this.ctx.strokeRect(x + 1, y + 1, cellSize - 2, cellSize - 2);
 
-                    this.ctx.globalAlpha = 0.7;
-                    this.ctx.fillStyle = '#ff6600';
-                    this.ctx.font = 'bold 12px Arial';
-                    this.ctx.textAlign = 'center';
-                    this.ctx.textBaseline = 'middle';
-                    this.ctx.fillText('💰✕', centerX, centerY);
+                    this.ctx.globalAlpha = 0.8;
+                    this.ctx.strokeStyle = '#ff6600';
+                    this.ctx.lineWidth = 2.5;
+                    this.ctx.beginPath();
+                    this.ctx.moveTo(centerX - 10, centerY - 10);
+                    this.ctx.lineTo(centerX + 10, centerY + 10);
+                    this.ctx.moveTo(centerX + 10, centerY - 10);
+                    this.ctx.lineTo(centerX - 10, centerY + 10);
+                    this.ctx.stroke();
                 }
             }
         }
@@ -636,7 +640,8 @@ class Game {
 
     renderBuildPreview() {
         if (!this.selectedTowerType || !this.hoverCell) return;
-        if (this.state !== CONFIG.GAME_STATES.WAVE_PREPARE) return;
+        if (this.state === CONFIG.GAME_STATES.PAUSED) return;
+        if (this.state === CONFIG.GAME_STATES.GAME_OVER) return;
         
         const { col, row } = this.hoverCell;
         if (!this.isPositionInMap(col, row)) return;
